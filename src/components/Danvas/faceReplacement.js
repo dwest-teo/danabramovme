@@ -1,33 +1,14 @@
-import './lib/jeelizFaceFilterES6';
+import faceFilter from './lib/jeelizFaceFilterES6';
+import NNC from './lib/NNC.json';
 
-var SETTINGS = {
-  //art painting settings :
-  artPainting: 'images/old-dan.jpg', //initial art painting
-  detectState: { x: 0.09803, y: 0.08814, s: 0.48782, ry: -0.04926 }, //detect state in the initial art painting to avoid search step
+import SETTINGS from './settings';
 
-  nDetectsArtPainting: 25, //number of positive detections to perfectly locate the face in the art painting
-  detectArtPaintingThreshold: 0.6,
-  artPaintingMaskScale: [1.3, 1.5],
-  artPaintingMaskOffset: [0.015, 0.15], //relative. 1-> 100% scale mask width of the image (or height)
-  artPaintingCropSmoothEdge: 0.25, //crop smooth edge
-  artPaintingHeadForheadY: 0.65, //forhead start when Y>this value. Max: 1
-  artPaintingHeadJawY: 0.4, //lower jaw start when Y<this value. Max: 1
+import COPY_VS from './shaders/copy.vs';
+import COPY_FS from './shaders/copy.fs';
+import SEARCH_FS from './shaders/search.fs';
+import FINAL_FS from './shaders/final.fs';
 
-  //user crop face and detection settings :
-  videoDetectSizePx: 1024,
-  faceRenderSizePx: 256,
-  zoomFactor: 1.03, //1-> exactly the same zoom than for the art painting
-  detectionThreshold: 0.65, //sensibility, between 0 and 1. Less -> more sensitive
-  detectionHysteresis: 0.03,
-
-  //mixed settings :
-  hueTextureSizePx: 4, //should be PoT
-
-  //debug flags - should be set to false for standard running :
-  debugArtpaintingCrop: false,
-};
-
-var ARTPAINTING = {
+const ARTPAINTING = {
   baseTexture: false,
   potFaceCutTexture: null,
   potFaceCutTextureSizePx: 0,
@@ -40,24 +21,29 @@ var ARTPAINTING = {
   scaleFace: [1, 1],
   detectedState: false,
 };
-var USERCROP = {
+
+const USERCROP = {
   faceCutDims: [0, 0],
   potFaceCutTexture: null,
   hueTexture: null,
 };
-var SHPS = {
-  //shaderprograms
+
+const SHPS = {
+  // shaderprograms
   cropUserFace: null,
   copy: null,
 };
 
-var DOMARTPAINTINGCONTAINER;
-var GL, GLDRAWTARGET, FBO; //WebGL global stuffs
+let DOMARTPAINTINGCONTAINER;
+let GL;
+let GLDRAWTARGET;
+let FBO;
 
-var NLOADEDS = 0,
-  FFSPECS;
-var STATES = {
-  //possible states of the app. ENUM equivalent
+let NLOADEDS = 0;
+let FFSPECS;
+
+const STATES = {
+  // possible states of the app. ENUM equivalent
   ERROR: -1,
   IDLE: 0,
   LOADING: 1,
@@ -66,24 +52,25 @@ var STATES = {
   BUSY: 4,
   ARTPAINTINGFACEDETECTPROVIDED: 5,
 };
-var STATE = STATES.IDLE;
-var ISUSERFACEDETECTED = false;
 
-//entry point
-export function main() {
+let STATE = STATES.IDLE;
+let ISUSERFACEDETECTED = false;
+
+// entry point
+export function main(canvas, container) {
   STATE = STATES.LOADING;
 
   // build_carousel();
 
-  DOMARTPAINTINGCONTAINER = document.getElementById('artpaintingContainer');
+  DOMARTPAINTINGCONTAINER = container;
 
   ARTPAINTING.image.src = SETTINGS.artPainting;
   ARTPAINTING.image.onload = check_isLoaded.bind(null, 'ARTPAINTING.image');
 
-  JEEFACEFILTERAPI.init({
-    canvasId: 'jeeFaceFilterCanvas',
-    NNCpath: './lib', //root of NNC.json file
-    callbackReady: function(errCode, spec) {
+  faceFilter.init({
+    canvasId: canvas.id,
+    NNCpath: NNC,
+    callbackReady: (errCode, spec) => {
       if (errCode) {
         console.log('AN ERROR HAPPENS. ERROR CODE =', errCode);
         STATE = STATES.ERROR;
@@ -94,13 +81,13 @@ export function main() {
       FBO = GL.createFramebuffer();
       GLDRAWTARGET = GL.DRAW_FRAMEBUFFER ? GL.DRAW_FRAMEBUFFER : GL.FRAMEBUFFER;
 
-      console.log('INFO : JEEFACEFILTERAPI IS READY');
-      check_isLoaded('JEEFACEFILTERAPI');
-    }, //end callbackReady()
+      console.log('INFO : faceFilter IS READY');
+      check_isLoaded('faceFilter');
+    }, // end callbackReady()
 
-    //called at each render iteration (drawing loop)
-    callbackTrack: callbackTrack,
-  }); //end JEEFACEFILTERAPI.init
+    // called at each render iteration (drawing loop)
+    callbackTrack,
+  }); // end faceFilter.init
 }
 
 function check_isLoaded(label) {
@@ -116,17 +103,17 @@ function start() {
   create_textures();
   build_shps();
 
-  //set the canvas to the artpainting size :
+  // set the canvas to the artpainting size :
   update_artPainting(SETTINGS.detectState);
-} //end start()
+} // end start()
 
 function update_artPainting(detectState) {
-  //called both at start (start()) and when user change the art painting
+  // called both at start (start()) and when user change the art painting
   FFSPECS.canvasElement.width = ARTPAINTING.image.width;
   FFSPECS.canvasElement.height = ARTPAINTING.image.height;
-  JEEFACEFILTERAPI.resize();
+  faceFilter.resize();
 
-  //create or update the artpainting webgl texture :
+  // create or update the artpainting webgl texture :
   if (!ARTPAINTING.baseTexture) {
     ARTPAINTING.baseTexture = GL.createTexture();
   }
@@ -145,7 +132,7 @@ function update_artPainting(detectState) {
   GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
   GL.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
 
-  JEEFACEFILTERAPI.set_inputTexture(
+  faceFilter.set_inputTexture(
     ARTPAINTING.baseTexture,
     ARTPAINTING.image.width,
     ARTPAINTING.image.height
@@ -160,7 +147,7 @@ function update_artPainting(detectState) {
   FFSPECS.canvasElement.style.left = '';
   FFSPECS.canvasElement.style.width = '';
 
-  toggle_carousel(true);
+  // toggle_carousel(true);
 
   if (detectState) {
     STATE = STATES.ARTPAINTINGFACEDETECTPROVIDED;
@@ -168,7 +155,7 @@ function update_artPainting(detectState) {
   } else {
     STATE = STATES.DETECTARTPAINTINGFACE;
   }
-} //end update_artPainting()
+} // end update_artPainting()
 
 // function build_carousel() {
 //   $('#carousel').slick({
@@ -185,21 +172,21 @@ function update_artPainting(detectState) {
 //   toggle_carousel(false);
 // }
 
-function toggle_carousel(isEnabled) {
-  if (isEnabled) {
-    $('#carousel').css({
-      opacity: 1,
-      pointerEvents: 'auto',
-    });
-  } else {
-    $('#carousel').css({
-      opacity: 0.5,
-      pointerEvents: 'none',
-    });
-  }
-}
+// function toggle_carousel(isEnabled) {
+//   if (isEnabled) {
+//     $('#carousel').css({
+//       opacity: 1,
+//       pointerEvents: 'auto',
+//     });
+//   } else {
+//     $('#carousel').css({
+//       opacity: 0.5,
+//       pointerEvents: 'none',
+//     });
+//   }
+// }
 
-//called directly from the DOM controls to change the base image :
+// called directly from the DOM controls to change the base image :
 export function change_artPainting(urlImage, detectState) {
   if (
     urlImage === ARTPAINTING.url ||
@@ -212,7 +199,7 @@ export function change_artPainting(urlImage, detectState) {
   }
 
   STATE = STATES.BUSY;
-  toggle_carousel(false);
+  // toggle_carousel(false);
   if (ARTPAINTING.canvasMask) {
     ARTPAINTING.canvasMask.parentElement.removeChild(ARTPAINTING.canvasMask);
     ARTPAINTING.canvasMask = false;
@@ -220,7 +207,7 @@ export function change_artPainting(urlImage, detectState) {
   ARTPAINTING.image = new Image();
 
   if (urlImage === 'CUSTOM') {
-    //upload custom image
+    // upload custom image
     var domInputFile = document.getElementById('customImage');
     if (!domInputFile.files || !domInputFile.files[0]) {
       alert('You should select at least one file');
@@ -238,7 +225,7 @@ export function change_artPainting(urlImage, detectState) {
     ARTPAINTING.image.src = urlImage;
     ARTPAINTING.image.onload = update_artPainting.bind(null, detectState);
   }
-} //end change_artPainting()
+} // end change_artPainting()
 
 function create_textures() {
   var create_emptyTexture = function(w, h) {
@@ -265,7 +252,7 @@ function create_textures() {
     return tex;
   };
 
-  //create the artpainting and userCrop hue textures :
+  // create the artpainting and userCrop hue textures :
   var create_hueTexture = function() {
     return create_emptyLinearTexture(
       SETTINGS.hueTextureSizePx,
@@ -275,7 +262,7 @@ function create_textures() {
   ARTPAINTING.hueTexture = create_hueTexture();
   USERCROP.hueTexture = create_hueTexture();
 
-  //create the userCrop textures
+  // create the userCrop textures
   var faceAspectRatio =
     SETTINGS.artPaintingMaskScale[1] / SETTINGS.artPaintingMaskScale[0];
   USERCROP.faceCutDims[0] = SETTINGS.faceRenderSizePx;
@@ -293,7 +280,7 @@ function create_textures() {
     GL.TEXTURE_MIN_FILTER,
     GL.LINEAR_MIPMAP_NEAREST
   );
-} //end create_textures()
+} // end create_textures()
 
 function build_artPaintingMask(detectState, callback) {
   //cut the face with webgl and put a fading
@@ -325,7 +312,7 @@ function build_artPaintingMask(detectState, callback) {
   GL.activeTexture(GL.TEXTURE0);
   GL.bindTexture(GL.TEXTURE_2D, ARTPAINTING.baseTexture);
 
-  //FILL VIEWPORT
+  // FILL VIEWPORT
   GL.enable(GL.BLEND);
   GL.blendFunc(GL.SRC_ALPHA, GL.ZERO);
   GL.clearColor(0, 0, 0, 0);
@@ -333,7 +320,7 @@ function build_artPaintingMask(detectState, callback) {
   GL.drawElements(GL.TRIANGLES, 3, GL.UNSIGNED_SHORT, 0);
   GL.disable(GL.BLEND);
 
-  //copy the face cuted to a dumb canvas2D which will be displayed in the DOM
+  // copy the face cuted to a dumb canvas2D which will be displayed in the DOM
   var artPaintingMask = document.createElement('canvas');
   artPaintingMask.width = ARTPAINTING.image.width;
   artPaintingMask.height = ARTPAINTING.image.height;
@@ -347,7 +334,7 @@ function build_artPaintingMask(detectState, callback) {
   ARTPAINTING.canvasMask = artPaintingMask;
   DOMARTPAINTINGCONTAINER.appendChild(artPaintingMask);
 
-  //initialize the face cut pot texture
+  // initialize the face cut pot texture
   var faceWidthPx = Math.round(ARTPAINTING.image.width * sxn);
   var faceHeightPx = Math.round(ARTPAINTING.image.height * syn);
   var maxDimPx = Math.max(faceWidthPx, faceHeightPx);
@@ -375,7 +362,7 @@ function build_artPaintingMask(detectState, callback) {
     GL.LINEAR_MIPMAP_NEAREST
   );
 
-  //compute the face cut pot texture by doing render to texture
+  // compute the face cut pot texture by doing render to texture
   GL.useProgram(SHPS.cropUserFace.program);
   GL.uniform2f(SHPS.cropUserFace.offset, xn, yn);
   GL.uniform2f(SHPS.cropUserFace.scale, sxn, syn);
@@ -395,9 +382,9 @@ function build_artPaintingMask(detectState, callback) {
     ARTPAINTING.potFaceCutTexture,
     0
   );
-  GL.drawElements(GL.TRIANGLES, 3, GL.UNSIGNED_SHORT, 0); //FILL VIEWPORT
+  GL.drawElements(GL.TRIANGLES, 3, GL.UNSIGNED_SHORT, 0); // FILL VIEWPORT
 
-  //copy the ARTPAINTING.potFaceCutTexture to ARTPAINTING.hueTexture :
+  // copy the ARTPAINTING.potFaceCutTexture to ARTPAINTING.hueTexture :
   GL.useProgram(SHPS.copyInvX.program);
   GL.viewport(0, 0, SETTINGS.hueTextureSizePx, SETTINGS.hueTextureSizePx);
   GL.framebufferTexture2D(
@@ -409,50 +396,15 @@ function build_artPaintingMask(detectState, callback) {
   );
   GL.bindTexture(GL.TEXTURE_2D, ARTPAINTING.potFaceCutTexture);
   GL.generateMipmap(GL.TEXTURE_2D);
-  GL.drawElements(GL.TRIANGLES, 3, GL.UNSIGNED_SHORT, 0); //FILL VIEWPORT
+  GL.drawElements(GL.TRIANGLES, 3, GL.UNSIGNED_SHORT, 0); // FILL VIEWPORT
 
   GL.bindFramebuffer(GLDRAWTARGET, null);
   callback();
-} //end build_artPaintingMask()
+} // end build_artPaintingMask()
 
 function build_shps() {
-  var copyVertexShaderSource =
-    'attribute vec2 position;\n\
-         varying vec2 vUV;\n\
-         void main(void){\n\
-            gl_Position=vec4(position, 0., 1.);\n\
-            vUV=0.5+0.5*position;\n\
-         }';
-
-  var copyFragmentShaderSource =
-    'precision lowp float;\n\
-         uniform sampler2D samplerImage;\n\
-         varying vec2 vUV;\n\
-         \n\
-         void main(void){\n\
-             gl_FragColor=texture2D(samplerImage, vUV);\n\
-         }';
-
-  //build the search SHP
-  var shpSearch = build_shaderProgram(
-    copyVertexShaderSource,
-    'precision lowp float;\n\
-            varying vec2 vUV;\n\
-            uniform sampler2D samplerVideo;\n\
-            uniform vec4 uxysw;\n\
-            \n\
-            void main(void) {\n\
-                vec3 colorVideo=texture2D(samplerVideo, vUV).rgb;\n\
-                vec2 pos=vUV*2.-vec2(1.,1.);\n\
-                vec2 isInside=step(uxysw.xy-uxysw.zw, pos);\n\
-                isInside*=step(pos, uxysw.xy+uxysw.zw);\n\
-                vec2 blendCenterFactor=abs(pos-uxysw.xy)/uxysw.zw;\n\
-                float alpha=isInside.x*isInside.y*pow(max(blendCenterFactor.x, blendCenterFactor.y), 3.);\n\
-                vec3 color=mix(colorVideo, vec3(0.,0.6,1.), alpha);\n\
-                gl_FragColor=vec4(color,1.);\n\
-            }',
-    'SEARCH FACE'
-  );
+  // build the search SHP
+  const shpSearch = build_shaderProgram(COPY_VS, SEARCH_FS, 'SEARCH FACE');
   SHPS.search = {
     program: shpSearch,
     samplerVideo: GL.getUniformLocation(shpSearch, 'samplerVideo'),
@@ -461,7 +413,7 @@ function build_shps() {
   GL.useProgram(shpSearch);
   GL.uniform1i(SHPS.search.samplerVideo, 0);
 
-  //ARTPAINTING SHPS
+  // ARTPAINTING SHPS
   var set_apShp = function(shp) {
     var uSamplerImage = GL.getUniformLocation(shp, 'samplerImage');
     var uScale = GL.getUniformLocation(shp, 'scale');
@@ -499,7 +451,7 @@ function build_shps() {
                        }';
 
   var shpBuildMask = build_shaderProgram(
-    copyVertexShaderSource,
+    COPY_VS,
 
     'precision highp float;\n\
          uniform vec2 offset, scale;\n\
@@ -566,11 +518,7 @@ function build_shps() {
   SHPS.cropUserFace = set_apShp(shpCutFace);
 
   //build the copy shader program :
-  var shpCopy = build_shaderProgram(
-    copyVertexShaderSource,
-    copyFragmentShaderSource,
-    'COPY'
-  );
+  var shpCopy = build_shaderProgram(COPY_VS, COPY_FS, 'COPY');
   SHPS.copy = {
     program: shpCopy,
   };
@@ -580,11 +528,8 @@ function build_shps() {
 
   //build the copyInvX shader program
   var shpCopyInvX = build_shaderProgram(
-    copyVertexShaderSource.replace(
-      'vUV=0.5+0.5*position',
-      'vUV=0.5+vec2(-0.5,0.5)*position'
-    ),
-    copyFragmentShaderSource,
+    COPY_VS.replace('vUV=0.5+0.5*position', 'vUV=0.5+vec2(-0.5,0.5)*position'),
+    COPY_FS,
     'COPYINVX'
   );
   SHPS.copyInvX = {
@@ -595,58 +540,7 @@ function build_shps() {
   GL.uniform1i(uSamplerImage, 0);
 
   //final render shp
-  var shpRender = build_shaderProgram(
-    copyVertexShaderSource,
-    'precision highp float;\n\
-         uniform sampler2D samplerImage, samplerHueSrc, samplerHueDst;\n\
-         uniform vec2 offset, scale;\n\
-         varying vec2 vUV;\n\
-         const vec2 EPSILON2=vec2(0.001, 0.001);\n\
-         \n\
-         vec3 rgb2hsv(vec3 c) { //from http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl\n\
-            vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);\n\
-            vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));\n\
-            vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));\n\
-            float d = q.x - min(q.w, q.y);\n\
-            float e = 1.0e-10;\n\
-            return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);\n\
-         }\n\
-         \n\
-         vec3 hsv2rgb(vec3 c) { //from https://github.com/hughsk/glsl-hsv2rgb \n\
-            vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0); \n\
-            vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www); \n\
-            return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y); \n\
-            //return c.z * normalize(mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y));\n\
-         } \n\
-         \n\
-         void main(void){\n\
-             //flip left-right :\n\
-             vec2 uv=vec2(1.-vUV.x, vUV.y);\n\
-             //get color in HSV format :\n\
-             vec2 uvCut=uv*scale+offset-scale/2.;\n\
-             vec3 colorRGB=texture2D(samplerImage, uvCut).rgb;\n\
-             vec3 colorHSV=rgb2hsv(colorRGB);\n\
-             //compute color transform :\n\
-             vec3 srcRGB=texture2D(samplerHueSrc, uv).rgb;\n\
-             vec3 dstRGB=texture2D(samplerHueDst, uv).rgb;\n\
-             vec3 srcHSV=rgb2hsv(srcRGB);\n\
-             vec3 dstHSV=rgb2hsv(dstRGB);\n\
-             //apply the transform :\n\
-             vec2 factorSV=vec2(1.,0.8)*dstHSV.yz/(srcHSV.yz+EPSILON2);\n\
-             factorSV=clamp(factorSV, vec2(0.3,0.3), vec2(3,3.));\n\
-             //factorSV.x=mix(0., factorSV.x, smoothstep(0.02, 0.3, colorHSV.z) );\n\
-             float dHue=dstHSV.x-srcHSV.x;\n\
-             vec3 colorHSVout=vec3(mod(1.0+colorHSV.x+dHue, 1.0), colorHSV.yz*factorSV);\n\
-             colorHSVout=clamp(colorHSVout, vec3(0.,0.,0.), vec3(1.,1.,1));\n\
-             //vec3 colorHSVout2=vec3(dstHSV.xy, colorHSVout.z);\n\
-             //colorHSVout=mix(colorHSVout2, colorHSVout, smoothstep(0.2,0.4,colorHSV.y)); //0.6->0.8\n\
-             //colorHSVout=mix(colorHSVout, colorHSVout2, smoothstep(0.5,1.,colorHSV.z)); //0.6->0.8\n\
-             //reconvert to RGB and output the color :\n\
-             colorRGB=hsv2rgb(colorHSVout);\n\
-             gl_FragColor=vec4(colorRGB, 1.);\n\
-         }',
-    'FINAL RENDER FACE'
-  );
+  var shpRender = build_shaderProgram(COPY_VS, FINAL_FS, 'FINAL RENDER FACE');
   SHPS.render = {
     program: shpRender,
     scale: GL.getUniformLocation(shpRender, 'scale'),
@@ -667,13 +561,13 @@ function reset_toVideo() {
 
   FFSPECS.canvasElement.width = SETTINGS.videoDetectSizePx;
   FFSPECS.canvasElement.height = SETTINGS.videoDetectSizePx;
-  JEEFACEFILTERAPI.resize();
+  faceFilter.resize();
 
-  JEEFACEFILTERAPI.reset_inputTexture();
+  faceFilter.reset_inputTexture();
   STATE = STATES.DETECTUSERFACE;
 }
 
-//compile a shader
+// compile a shader
 function compile_shader(source, type, typeString) {
   var shader = GL.createShader(type);
   GL.shaderSource(shader, source);
@@ -688,38 +582,38 @@ function compile_shader(source, type, typeString) {
   return shader;
 }
 
-//helper function to build the shader program :
+// helper function to build the shader program :
 function build_shaderProgram(shaderVertexSource, shaderFragmentSource, id) {
-  //compile both shader separately
-  var shaderVertex = compile_shader(
+  // compile both shader separately
+  const shaderVertex = compile_shader(
     shaderVertexSource,
     GL.VERTEX_SHADER,
-    'VERTEX ' + id
+    `VERTEX ${id}`
   );
-  var shaderFragment = compile_shader(
+  const shaderFragment = compile_shader(
     shaderFragmentSource,
     GL.FRAGMENT_SHADER,
-    'FRAGMENT ' + id
+    `FRADMENT ${id}`
   );
 
-  var shaderProgram = GL.createProgram();
+  const shaderProgram = GL.createProgram();
   GL.attachShader(shaderProgram, shaderVertex);
   GL.attachShader(shaderProgram, shaderFragment);
 
-  //start the linking stage :
+  // start the linking stage :
   GL.linkProgram(shaderProgram);
-  var aPos = GL.getAttribLocation(shaderProgram, 'position');
+  const aPos = GL.getAttribLocation(shaderProgram, 'position');
   GL.enableVertexAttribArray(aPos);
 
   return shaderProgram;
-} //end build_shaderProgram()
+} // end build_shaderProgram()
 
 function position_userCropCanvas() {
   console.log('INFO : position_userCropCanvas()');
   var restoredPosition = FFSPECS.canvasElement.style.position;
   FFSPECS.canvasElement.style.position = 'absolute';
 
-  //compute topPx an leftPx in the artpainting canvas image ref :
+  // compute topPx an leftPx in the artpainting canvas image ref :
   var topPx = ARTPAINTING.image.height * ARTPAINTING.positionFace[1];
   var leftPx = ARTPAINTING.image.width * ARTPAINTING.positionFace[0];
   var widthFacePx = ARTPAINTING.image.width * ARTPAINTING.scaleFace[0];
@@ -728,7 +622,7 @@ function position_userCropCanvas() {
     (widthFacePx * SETTINGS.videoDetectSizePx) / SETTINGS.faceRenderSizePx; //the whole canvas is bigger than the user face rendering
   topPx = ARTPAINTING.image.height - topPx; //Y axis is inverted between WebGL viewport and CSS
 
-  //take account of the CSS scale factor of the art painting
+  // take account of the CSS scale factor of the art painting
   var domRect = DOMARTPAINTINGCONTAINER.getBoundingClientRect();
   var cssScaleFactor = domRect.width / ARTPAINTING.image.width;
   topPx *= cssScaleFactor;
@@ -737,7 +631,7 @@ function position_userCropCanvas() {
   widthFacePx *= cssScaleFactor;
   heightFacePx *= cssScaleFactor;
 
-  //position corner of the userFace instead of center
+  // position corner of the userFace instead of center
   topPx -= heightFacePx / 2;
   leftPx -= widthFacePx / 2;
 
@@ -746,9 +640,9 @@ function position_userCropCanvas() {
   FFSPECS.canvasElement.style.width = Math.round(widthPx).toString() + 'px';
 
   FFSPECS.canvasElement.style.position = restoredPosition;
-} //end position_userCropCanvas()
+} // end position_userCropCanvas()
 
-//draw in search mode
+// draw in search mode
 function draw_search(detectState) {
   GL.useProgram(SHPS.search.program);
   GL.viewport(0, 0, FFSPECS.canvasElement.width, FFSPECS.canvasElement.height);
@@ -764,12 +658,12 @@ function draw_search(detectState) {
   GL.drawElements(GL.TRIANGLES, 3, GL.UNSIGNED_SHORT, 0);
 }
 
-//draw final render
+// draw final render
 function draw_render(detectState) {
-  //do RTT
+  // do RTT
   GL.bindFramebuffer(GLDRAWTARGET, FBO);
 
-  //crop the user's face and put the result to USERCROP.potFaceCutTexture
+  // crop the user's face and put the result to USERCROP.potFaceCutTexture
   var s = detectState.s / SETTINGS.zoomFactor;
   var xn =
     detectState.x * 0.5 +
@@ -793,7 +687,7 @@ function draw_render(detectState) {
   GL.bindTexture(GL.TEXTURE_2D, FFSPECS.videoTexture);
   GL.drawElements(GL.TRIANGLES, 3, GL.UNSIGNED_SHORT, 0);
 
-  //shrink the userface to a SETTINGS.hueTextureSizePx texture
+  // shrink the userface to a SETTINGS.hueTextureSizePx texture
   GL.useProgram(SHPS.copy.program);
   GL.framebufferTexture2D(
     GL.FRAMEBUFFER,
@@ -807,7 +701,7 @@ function draw_render(detectState) {
   GL.generateMipmap(GL.TEXTURE_2D);
   GL.drawElements(GL.TRIANGLES, 3, GL.UNSIGNED_SHORT, 0);
 
-  //final rendering including light correction
+  // final rendering including light correction
   GL.bindFramebuffer(GLDRAWTARGET, null);
   GL.useProgram(SHPS.render.program);
   GL.uniform2f(SHPS.render.offset, xn, yn);
@@ -815,7 +709,7 @@ function draw_render(detectState) {
   GL.bindTexture(GL.TEXTURE_2D, FFSPECS.videoTexture);
   GL.activeTexture(GL.TEXTURE1);
   GL.bindTexture(GL.TEXTURE_2D, ARTPAINTING.hueTexture);
-  //GL.bindTexture(GL.TEXTURE_2D, ARTPAINTING.potFaceCutTexture); //KILL
+  // GL.bindTexture(GL.TEXTURE_2D, ARTPAINTING.potFaceCutTexture); //KILL
 
   GL.activeTexture(GL.TEXTURE2);
   GL.bindTexture(GL.TEXTURE_2D, USERCROP.hueTexture);
@@ -827,7 +721,7 @@ function draw_render(detectState) {
     USERCROP.faceCutDims[1]
   );
   GL.drawElements(GL.TRIANGLES, 3, GL.UNSIGNED_SHORT, 0);
-} //end draw_render()
+} // end draw_render()
 
 function callbackTrack(detectState) {
   switch (STATE) {
@@ -865,7 +759,7 @@ function callbackTrack(detectState) {
         detectState.detected <
           SETTINGS.detectionThreshold - SETTINGS.detectionHysteresis
       ) {
-        //DETECTION LOST
+        // DETECTION LOST
         ISUSERFACEDETECTED = false;
         FFSPECS.canvasElement.classList.remove('canvasDetected');
         FFSPECS.canvasElement.classList.add('canvasNotDetected');
@@ -874,7 +768,7 @@ function callbackTrack(detectState) {
         detectState.detected >
           SETTINGS.detectionThreshold + SETTINGS.detectionHysteresis
       ) {
-        //FACE DETECTED
+        // FACE DETECTED
         ISUSERFACEDETECTED = true;
         FFSPECS.canvasElement.classList.remove('canvasNotDetected');
         FFSPECS.canvasElement.classList.add('canvasDetected');
@@ -887,5 +781,8 @@ function callbackTrack(detectState) {
       }
 
       break;
-  } //end switch(STATE)
-} //end callbackTrack
+
+    default:
+      break;
+  } // end switch(STATE)
+} // end callbackTrack
