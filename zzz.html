@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta http-equiv="content-language" content="en-EN" />
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1">
+    <title>abramov me</title>
+
+    <script type="text/javascript" src="./jeelizFaceFilter.js"></script>
+    <script type="text/javascript" src="./faceReplacement.js"></script>
+
+    <style type='text/css'>
+        body {
+            margin: 0px;
+            box-sizing: border-box;
+            overflow: hidden;
+            font-family: Helvetica, Arial, Sans-Serif;
+            background-attachment: fixed;
+            background-position: center;
+            background-size: contain;
+        }
+
+        #artpaintingContainer {
+            z-index: 10;
+            position: absolute;
+            max-height: calc(100vh - 160px);
+            max-width: 100vw;
+            left: 50%;
+            top: 50%;
+            margin-top: -76px;
+            transform: translate(-50%, -50%);
+        }
+
+        #jeeFaceFilterCanvas {}
+
+        .artPainting {
+            z-index: 8;
+            top: 4px;
+            left: 0px;
+            max-width: 100vw;
+            max-height: calc(100vh - 160px);
+        }
+
+        .canvasDetected {
+            position: absolute;
+            z-index: -1;
+        }
+
+        .canvasNotDetected {
+            z-index: 11;
+            position: absolute;
+            top: auto !important;
+            bottom: 0px !important;
+            left: 0px !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+        }
+
+        #carousel {
+            z-index: 20;
+            position: absolute;
+            max-width: 100vw;
+            bottom: 0px;
+        }
+
+        .carouselItem {
+            cursor: pointer;
+            border: 6px solid transparent;
+            min-height: 128px;
+            width: auto !important;
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+
+        .slick-center {
+            transform: scale(1.1);
+            z-index: 99;
+            transform-origin: center bottom;
+            box-shadow: 0px 0px 12px white;
+        }
+
+        .slick-center .carouselItem {
+            border: none !important;
+
+        }
+
+        .slick-track {
+            height: 144px;
+            margin-top: 20px;
+        }
+
+        .carouselItem0 {
+            background-image: url('thumbnails/old-dan.jpg');
+            width: 86px !important;
+        }
+
+        .carouselItem1 {
+            background-image: url('thumbnails/new-dan.jpg');
+            width: 86px !important;
+        }
+    </style>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick-theme.min.css" />
+    <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>
+
+</head>
+
+<body onload="main()" style='color: white'>
+    <div id='artpaintingContainer'>
+        <canvas width="1024" height="1024" id='jeeFaceFilterCanvas' class='artPainting'></canvas>
+    </div>
+    <div id="carousel">
+        <div onclick="change_artPainting('images/old-dan.jpg', {x: 0.09803,y:0.08814,s:0.48782,ry:-0.04926})" class='carouselItem carouselItem0'></div>
+        <div onclick="change_artPainting('images/new-dan.jpg', {x:0.04351,y:0.07059,s:0.6098,ry:0.06192})" class='carouselItem carouselItem1'></div>
+    </div>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick.min.js"></script>
+</body>
+
+</html>
