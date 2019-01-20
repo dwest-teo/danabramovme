@@ -4,6 +4,8 @@ import { main, change_artPainting } from './faceReplacement';
 
 import SETTINGS, { IMG_STATE } from './settings';
 
+// TODO - this save support only saves the webcam canvas layer
+// need to combine this canvas with the "artPainting" canvas and save result
 const Danvas = ({ image }) => {
   const canvasRef = useRef();
   const containerRef = useRef();
