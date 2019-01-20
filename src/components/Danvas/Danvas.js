@@ -1,12 +1,15 @@
-import React, { useEffect, useRef } from 'react';
-
+import React, { useEffect, useRef, useState } from 'react';
+import PropTypes from 'prop-types';
 import { main, change_artPainting } from './faceReplacement';
 
-import SETTINGS from './settings';
+import SETTINGS, { IMG_STATE } from './settings';
 
+// TODO - this save support only saves the webcam canvas layer
+// need to combine this canvas with the "artPainting" canvas and save result
 const Danvas = ({ image }) => {
   const canvasRef = useRef();
   const containerRef = useRef();
+  const [savedImg, setSavedImg] = useState();
 
   useEffect(() => {
     // eslint-disable-next-line no-console
@@ -16,9 +19,10 @@ const Danvas = ({ image }) => {
 
   useEffect(
     () => {
+      setSavedImg();
       // eslint-disable-next-line no-console
       console.log('faceReplacement: change_artPainting()');
-      change_artPainting(image);
+      change_artPainting(image, IMG_STATE[image]);
     },
     [image]
   );
@@ -32,8 +36,19 @@ const Danvas = ({ image }) => {
         id="jeeFaceFilterCanvas"
         className="artPainting"
       />
+      <button
+        type="button"
+        onClick={() => setSavedImg(canvasRef.current.toDataURL('image/png'))}
+      >
+        Save
+      </button>
+      {savedImg && <img src={savedImg} alt="test" />}
     </div>
   );
+};
+
+Danvas.propTypes = {
+  image: PropTypes.string,
 };
 
 Danvas.defaultProps = {

@@ -1,11 +1,18 @@
 import OLD_DAN from '../../images/old-dan.jpg';
+import NEW_DAN from '../../images/new-dan.jpg';
+
+const imgState = {};
+imgState[OLD_DAN] = { x: 0.09903, y: 0.09914, s: 0.48782, ry: -0.04926 };
+imgState[NEW_DAN] = { x: 0.04351, y: 0.07059, s: 0.6098, ry: 0.06192 };
+
+export const IMG_STATE = imgState;
 
 export default {
   // initial art painting
   artPainting: OLD_DAN,
 
   // detect state in the initial art painting to avoid search step
-  detectState: { x: 0.09803, y: 0.08814, s: 0.48782, ry: -0.04926 },
+  detectState: imgState[OLD_DAN],
 
   // number of positive detections to perfectly locate the face in the art painting
   nDetectsArtPainting: 25,
