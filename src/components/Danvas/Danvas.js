@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Fragment, useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
+import html2canvas from 'html2canvas';
 import { main, change_artPainting } from './faceReplacement';
 
 import SETTINGS, { IMG_STATE } from './settings';
 
-// TODO - this save support only saves the webcam canvas layer
-// need to combine this canvas with the "artPainting" canvas and save result
+// TODO - saved image sizing just ain't right
 const Danvas = ({ image }) => {
   const canvasRef = useRef();
   const containerRef = useRef();
@@ -28,22 +28,34 @@ const Danvas = ({ image }) => {
   );
 
   return (
-    <div ref={containerRef} id="artpaintingContainer">
-      <canvas
-        ref={canvasRef}
-        width="1024"
-        height="1024"
-        id="jeeFaceFilterCanvas"
-        className="artPainting"
-      />
+    <Fragment>
+      <div ref={containerRef} id="artpaintingContainer">
+        <canvas
+          ref={canvasRef}
+          width="1024"
+          height="1024"
+          id="jeeFaceFilterCanvas"
+          className="artPainting"
+        />
+      </div>
       <button
         type="button"
-        onClick={() => setSavedImg(canvasRef.current.toDataURL('image/png'))}
+        onClick={() => {
+          html2canvas(containerRef.current, {
+            width: canvasRef.current.width,
+            height: canvasRef.current.height,
+            scale: 1,
+            x: 0,
+            y: 0,
+          }).then(canvas => {
+            setSavedImg(canvas.toDataURL('image/png'));
+          });
+        }}
       >
         Save
       </button>
       {savedImg && <img src={savedImg} alt="test" />}
-    </div>
+    </Fragment>
   );
 };
 
