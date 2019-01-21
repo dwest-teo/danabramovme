@@ -1,5 +1,7 @@
-import React, { Fragment, useState } from 'react';
+import React, { useState } from 'react';
 import Danvas from '../Danvas';
+
+import { ContentWrapper, Heading, Hyperlink } from '../UI';
 
 import OLD_DAN from '../../images/old-dan.jpg';
 import NEW_DAN from '../../images/new-dan.jpg';
@@ -10,7 +12,11 @@ const Home = () => {
   const [activeDan, setActiveDan] = useState(OLD_DAN);
 
   return (
-    <Fragment>
+    <ContentWrapper>
+      <header>
+        <Heading>Dan Abramov Me</Heading>
+        <Hyperlink href="#">Link me up bro</Hyperlink>
+      </header>
       <Danvas image={activeDan} />
       {IMAGES.map(img => (
         <button
@@ -35,7 +41,7 @@ const Home = () => {
           />
         </button>
       ))}
-    </Fragment>
+    </ContentWrapper>
   );
 };
 

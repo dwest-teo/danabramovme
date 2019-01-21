@@ -1,7 +1,9 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import html2canvas from 'html2canvas';
+
 import { main, change_artPainting } from './faceReplacement';
+import { Button } from '../UI';
 
 import SETTINGS, { IMG_STATE } from './settings';
 
@@ -38,7 +40,7 @@ const Danvas = ({ image }) => {
           className="artPainting"
         />
       </div>
-      <button
+      <Button
         type="button"
         onClick={() => {
           html2canvas(containerRef.current, {
@@ -53,7 +55,7 @@ const Danvas = ({ image }) => {
         }}
       >
         Save
-      </button>
+      </Button>
       {savedImg && <img src={savedImg} alt="test" />}
     </Fragment>
   );
