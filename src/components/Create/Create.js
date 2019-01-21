@@ -1,4 +1,6 @@
-import React, { Fragment, useState } from 'react';
+import React, { useState } from 'react';
+import { ContentWrapper, Button } from '../UI';
+
 import Danvas from '../Danvas';
 
 import OLD_DAN from '../../images/old-dan.jpg';
@@ -10,10 +12,10 @@ const Create = () => {
   const [activeDan, setActiveDan] = useState(OLD_DAN);
 
   return (
-    <Fragment>
+    <ContentWrapper>
       <Danvas image={activeDan} />
       {IMAGES.map(img => (
-        <button
+        <Button
           key={img}
           onClick={() => setActiveDan(img)}
           type="button"
@@ -33,9 +35,9 @@ const Create = () => {
               width: '100%',
             }}
           />
-        </button>
+        </Button>
       ))}
-    </Fragment>
+    </ContentWrapper>
   );
 };
 

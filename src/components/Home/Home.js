@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+
 import { CREATE, GALLERY } from '../../constants';
+import { ContentWrapper, Heading, Hyperlink, Text } from '../UI';
 
 export default () => (
-  <div>
-    <h1>danabramov.me</h1>
-    <Link to={CREATE}>lets do this</Link>
-    <div style={{ marginTop: '20px' }}>
-      maybe show most recent from gallery here?
-    </div>
-    <Link to={GALLERY}>look at gallery</Link>
-  </div>
+  <ContentWrapper>
+    <header>
+      <Heading>danabramov.me</Heading>
+    </header>
+    <Hyperlink as={Link} to={CREATE}>
+      let's do this
+    </Hyperlink>
+    <Text>maybe show most recent from gallery here?</Text>
+  </ContentWrapper>
 );

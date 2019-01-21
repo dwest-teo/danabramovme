@@ -1,11 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { CREATE } from '../../constants';
+import { ContentWrapper, Heading, Hyperlink, Text } from '../UI';
 
 export default () => (
-  <div>
-    <h1>gallery</h1>
-    <Link to={CREATE}>make your own</Link>
-    <div style={{ marginTop: '20px' }}>results from firebase here</div>
-  </div>
+  <ContentWrapper>
+    <Heading>gallery</Heading>
+    <Hyperlink as={Link} to={CREATE}>
+      make your own
+    </Hyperlink>
+    <Text mt={4}>results from firebase here</Text>
+  </ContentWrapper>
 );

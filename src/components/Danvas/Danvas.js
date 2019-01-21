@@ -1,7 +1,9 @@
-import React, { Fragment, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import html2canvas from 'html2canvas';
+
 import { main, change_artPainting } from './faceReplacement';
+import { ContentWrapper, Button } from '../UI';
 
 import SETTINGS, { IMG_STATE } from './settings';
 
@@ -17,20 +19,19 @@ const Danvas = ({ image }) => {
     main(canvasRef.current, containerRef.current);
   }, []);
 
-  useEffect(
-    () => {
-      setSavedImg();
-      // eslint-disable-next-line no-console
-      console.log('faceReplacement: change_artPainting()');
-      change_artPainting(image, IMG_STATE[image]);
-    },
-    [image]
-  );
+  useEffect(() => {
+    setSavedImg();
+    // eslint-disable-next-line no-console
+    console.log('faceReplacement: change_artPainting()');
+    change_artPainting(image, IMG_STATE[image]);
+  }, [image]);
 
   return savedImg ? (
-    <img src={savedImg} alt="test" />
+    <ContentWrapper>
+      <img src={savedImg} alt="test" />
+    </ContentWrapper>
   ) : (
-    <Fragment>
+    <ContentWrapper>
       <div ref={containerRef} id="artpaintingContainer">
         <canvas
           ref={canvasRef}
@@ -40,7 +41,7 @@ const Danvas = ({ image }) => {
           className="artPainting"
         />
       </div>
-      <button
+      <Button
         type="button"
         onClick={() => {
           html2canvas(containerRef.current, {
@@ -55,8 +56,8 @@ const Danvas = ({ image }) => {
         }}
       >
         Save
-      </button>
-    </Fragment>
+      </Button>
+    </ContentWrapper>
   );
 };
 
