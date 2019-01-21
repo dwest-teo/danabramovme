@@ -32,8 +32,8 @@ const Danvas = ({ image }) => {
       <div ref={containerRef} id="artpaintingContainer">
         <canvas
           ref={canvasRef}
-          width="1024"
-          height="1024"
+          width="788"
+          height="1386"
           id="jeeFaceFilterCanvas"
           className="artPainting"
         />
@@ -42,13 +42,13 @@ const Danvas = ({ image }) => {
         type="button"
         onClick={() => {
           html2canvas(containerRef.current, {
-            width: canvasRef.current.width,
-            height: canvasRef.current.height,
+            width: containerRef.current.clientWidth,
+            height: containerRef.current.clientHeight,
             scale: 1,
-            x: 0,
-            y: 0,
+            x: 334,
+            y: 4,
           }).then(canvas => {
-            setSavedImg(canvas.toDataURL('image/png'));
+            setSavedImg(canvas.toDataURL('image/jpeg'));
           });
         }}
       >
