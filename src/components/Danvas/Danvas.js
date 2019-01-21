@@ -27,7 +27,9 @@ const Danvas = ({ image }) => {
     [image]
   );
 
-  return (
+  return savedImg ? (
+    <img src={savedImg} alt="test" />
+  ) : (
     <Fragment>
       <div ref={containerRef} id="artpaintingContainer">
         <canvas
@@ -54,7 +56,6 @@ const Danvas = ({ image }) => {
       >
         Save
       </button>
-      {savedImg && <img src={savedImg} alt="test" />}
     </Fragment>
   );
 };
