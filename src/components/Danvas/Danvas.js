@@ -1,9 +1,9 @@
-import React, { Fragment, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import html2canvas from 'html2canvas';
 
 import { main, change_artPainting } from './faceReplacement';
-import { Button } from '../UI';
+import { ContentWrapper, Button } from '../UI';
 
 import SETTINGS, { IMG_STATE } from './settings';
 
@@ -19,23 +19,24 @@ const Danvas = ({ image }) => {
     main(canvasRef.current, containerRef.current);
   }, []);
 
-  useEffect(
-    () => {
-      setSavedImg();
-      // eslint-disable-next-line no-console
-      console.log('faceReplacement: change_artPainting()');
-      change_artPainting(image, IMG_STATE[image]);
-    },
-    [image]
-  );
+  useEffect(() => {
+    setSavedImg();
+    // eslint-disable-next-line no-console
+    console.log('faceReplacement: change_artPainting()');
+    change_artPainting(image, IMG_STATE[image]);
+  }, [image]);
 
-  return (
-    <Fragment>
+  return savedImg ? (
+    <ContentWrapper>
+      <img src={savedImg} alt="test" />
+    </ContentWrapper>
+  ) : (
+    <ContentWrapper>
       <div ref={containerRef} id="artpaintingContainer">
         <canvas
           ref={canvasRef}
-          width="1024"
-          height="1024"
+          width="788"
+          height="1386"
           id="jeeFaceFilterCanvas"
           className="artPainting"
         />
@@ -44,20 +45,19 @@ const Danvas = ({ image }) => {
         type="button"
         onClick={() => {
           html2canvas(containerRef.current, {
-            width: canvasRef.current.width,
-            height: canvasRef.current.height,
+            width: containerRef.current.clientWidth,
+            height: containerRef.current.clientHeight,
             scale: 1,
-            x: 0,
-            y: 0,
+            x: 334,
+            y: 4,
           }).then(canvas => {
-            setSavedImg(canvas.toDataURL('image/png'));
+            setSavedImg(canvas.toDataURL('image/jpeg'));
           });
         }}
       >
         Save
       </Button>
-      {savedImg && <img src={savedImg} alt="test" />}
-    </Fragment>
+    </ContentWrapper>
   );
 };
 
